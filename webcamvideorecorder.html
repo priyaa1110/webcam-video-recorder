@@ -215,6 +215,30 @@ video {
   font-size: 0.875rem;
 }
 
+.countdown {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 6rem;
+  font-weight: 700;
+  color: #fafafa;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  display: none;
+  z-index: 10;
+}
+
+.countdown.active {
+  display: block;
+  animation: countdownPulse 1s ease-in-out;
+}
+
+@keyframes countdownPulse {
+  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+  50% { transform: translate(-50%, -50%) scale(1.2); }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
 @media (max-width: 640px) {
   .controls {
     flex-direction: column;
@@ -249,6 +273,7 @@ video {
   
   <div class="video-container">
     <video id="preview" autoplay muted playsinline></video>
+    <div class="countdown" id="countdown"></div>
     <div class="recording-indicator">
       <div class="recording-dot"></div>
       <span class="timer">00:00</span>
@@ -286,6 +311,7 @@ const status = document.querySelector('.status');
 const recordingIndicator = document.querySelector('.recording-indicator');
 const timer = document.querySelector('.timer');
 const recordingsList = document.getElementById('recordingsList');
+const countdown = document.getElementById('countdown');
 
 async function startCamera() {
   try {
@@ -326,6 +352,28 @@ function stopCamera() {
 function startRecording() {
   if (!mediaStream) return;
   
+  recordBtn.disabled = true;
+  status.textContent = 'Get ready...';
+  
+  let count = 3;
+  countdown.textContent = count;
+  countdown.classList.add('active');
+  
+  const countdownInterval = setInterval(() => {
+    count--;
+    if (count > 0) {
+      countdown.textContent = count;
+      countdown.classList.remove('active');
+      setTimeout(() => countdown.classList.add('active'), 10);
+    } else {
+      clearInterval(countdownInterval);
+      countdown.classList.remove('active');
+      beginRecording();
+    }
+  }, 1000);
+}
+
+function beginRecording() {
   recordedChunks = [];
   
   const options = {
