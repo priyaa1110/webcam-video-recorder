@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webcam Video Recorder</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #18181b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: #fafafa;
+  padding: 1rem;
+}
+
+.container {
+  max-width: 900px;
+  width: 100%;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.status {
+  font-size: 0.875rem;
+  color: #a1a1aa;
+}
+
+.video-container {
+  background: #27272a;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+video {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #18181b;
+}
+
+.recording-indicator {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(24, 24, 27, 0.8);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.recording-indicator.active {
+  display: flex;
+}
+
+.recording-dot {
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.timer {
+  font-weight: 500;
+  color: #fafafa;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  background: #3f3f46;
+  color: #fafafa;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn:hover {
+  background: #52525b;
+}
+
+.btn:active {
+  background: #27272a;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  background: #71717a;
+}
+
+.btn.primary:hover {
+  background: #a1a1aa;
+}
+
+.btn.danger {
+  background: #dc2626;
+}
+
+.btn.danger:hover {
+  background: #ef4444;
+}
+
+.recordings {
+  background: #27272a;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.recordings-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #fafafa;
+}
+
+.recordings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.recording-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #3f3f46;
+  border-radius: 6px;
+  gap: 1rem;
+}
+
+.recording-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.recording-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fafafa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recording-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-small {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  background: #52525b;
+  color: #fafafa;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-small:hover {
+  background: #71717a;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: #71717a;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .controls {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .recording-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .recording-actions {
+    width: 100%;
+  }
+  
+  .btn-small {
+    flex: 1;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1 class="title">Webcam Video Recorder</h1>
+    <div class="status">Ready to record</div>
+  </div>
+  
+  <div class="video-container">
+    <video id="preview" autoplay muted playsinline></video>
+    <div class="recording-indicator">
+      <div class="recording-dot"></div>
+      <span class="timer">00:00</span>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <button class="btn primary" id="startBtn">Start Camera</button>
+    <button class="btn" id="recordBtn" disabled>Start Recording</button>
+    <button class="btn danger" id="stopBtn" disabled>Stop Recording</button>
+  </div>
+  
+  <div class="recordings">
+    <h2 class="recordings-title">Recordings</h2>
+    <div class="recordings-list" id="recordingsList">
+      <div class="empty-state">No recordings yet</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let mediaStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordings = [];
+let isRecording = false;
+let recordingStartTime = 0;
+let timerInterval = null;
+
+const preview = document.getElementById('preview');
+const startBtn = document.getElementById('startBtn');
+const recordBtn = document.getElementById('recordBtn');
+const stopBtn = document.getElementById('stopBtn');
+const status = document.querySelector('.status');
+const recordingIndicator = document.querySelector('.recording-indicator');
+const timer = document.querySelector('.timer');
+const recordingsList = document.getElementById('recordingsList');
+
+async function startCamera() {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 1280, height: 720 },
+      audio: true
+    });
+    
+    preview.srcObject = mediaStream;
+    startBtn.textContent = 'Stop Camera';
+    startBtn.classList.remove('primary');
+    recordBtn.disabled = false;
+    status.textContent = 'Camera active';
+    
+    startBtn.onclick = stopCamera;
+  } catch (error) {
+    status.textContent = 'Error: ' + error.message;
+    console.error('Error accessing camera:', error);
+  }
+}
+
+function stopCamera() {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(track => track.stop());
+    preview.srcObject = null;
+    mediaStream = null;
+    
+    startBtn.textContent = 'Start Camera';
+    startBtn.classList.add('primary');
+    recordBtn.disabled = true;
+    stopBtn.disabled = true;
+    status.textContent = 'Camera stopped';
+    
+    startBtn.onclick = startCamera;
+  }
+}
+
+function startRecording() {
+  if (!mediaStream) return;
+  
+  recordedChunks = [];
+  
+  const options = {
+    mimeType: 'video/webm;codecs=vp9,opus'
+  };
+  
+  if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+    options.mimeType = 'video/webm;codecs=vp8,opus';
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      options.mimeType = 'video/webm';
+    }
+  }
+  
+  try {
+    mediaRecorder = new MediaRecorder(mediaStream, options);
+    
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        recordedChunks.push(event.data);
+      }
+    };
+    
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const timestamp = new Date().toLocaleString();
+      
+      recordings.push({
+        url: url,
+        blob: blob,
+        timestamp: timestamp,
+        name: `Recording ${recordings.length + 1}`
+      });
+      
+      renderRecordings();
+      status.textContent = 'Recording saved';
+    };
+    
+    mediaRecorder.start();
+    isRecording = true;
+    recordingStartTime = Date.now();
+    
+    recordBtn.disabled = true;
+    stopBtn.disabled = false;
+    recordingIndicator.classList.add('active');
+    status.textContent = 'Recording...';
+    
+    timerInterval = setInterval(updateTimer, 1000);
+  } catch (error) {
+    status.textContent = 'Error: ' + error.message;
+    console.error('Error starting recording:', error);
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    isRecording = false;
+    
+    recordBtn.disabled = false;
+    stopBtn.disabled = true;
+    recordingIndicator.classList.remove('active');
+    
+    clearInterval(timerInterval);
+    timer.textContent = '00:00';
+  }
+}
+
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  timer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function renderRecordings() {
+  if (recordings.length === 0) {
+    recordingsList.innerHTML = '<div class="empty-state">No recordings yet</div>';
+    return;
+  }
+  
+  recordingsList.innerHTML = recordings.map((recording, index) => `
+    <div class="recording-item">
+      <div class="recording-info">
+        <div class="recording-name">${recording.name} - ${recording.timestamp}</div>
+      </div>
+      <div class="recording-actions">
+        <button class="btn-small" onclick="playRecording(${index})">Play</button>
+        <button class="btn-small" onclick="downloadRecording(${index})">Download</button>
+        <button class="btn-small" onclick="deleteRecording(${index})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function playRecording(index) {
+  const recording = recordings[index];
+  const video = document.createElement('video');
+  video.src = recording.url;
+  video.controls = true;
+  video.style.width = '100%';
+  video.style.maxWidth = '800px';
+  
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  `;
+  
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  };
+  
+  modal.appendChild(video);
+  document.body.appendChild(modal);
+  video.play();
+}
+
+function downloadRecording(index) {
+  const recording = recordings[index];
+  const a = document.createElement('a');
+  a.href = recording.url;
+  a.download = `${recording.name}.webm`;
+  a.click();
+}
+
+function deleteRecording(index) {
+  URL.revokeObjectURL(recordings[index].url);
+  recordings.splice(index, 1);
+  renderRecordings();
+}
+
+startBtn.onclick = startCamera;
+recordBtn.onclick = startRecording;
+stopBtn.onclick = stopRecording;
+</script>
+</body>
+</html>
